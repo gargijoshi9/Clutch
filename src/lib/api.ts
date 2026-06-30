@@ -1,5 +1,5 @@
 import { BlockedBlock, Task, ScheduleItem, PressureAlert, RecoveryData } from "../types";
-import { splitIntoSessions, generateId } from "./utils";
+import { splitIntoSessions, generateId, getLocalDateStr } from "./utils";
 
 const API_BASE = ((import.meta as any).env?.VITE_API_URL || "").replace(/\/$/, "");
 
@@ -116,7 +116,7 @@ const generateMockSchedule = (
     return 0;
   });
 
-  // Schedule for next 7 days
+  // Schedule for next days
   const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   // Helper to parse time string HH:MM to minutes from midnight
@@ -131,8 +131,6 @@ const generateMockSchedule = (
     return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
   };
 
-  // Keep track of day and time slots
-  let currentTaskIndex = 0;
   let activeTasks = [...pendingTasks];
 
   // Flat list of sessions to schedule
@@ -149,45 +147,62 @@ const generateMockSchedule = (
     }
   }
 
-  let sessionIdx = 0;
+  // Keep track of day and time slots dynamically
+  const dayTimePointers: Record<string, number> = {};
 
-  for (let dayOffset = 0; dayOffset < 7 && sessionIdx < sessionsToSchedule.length; dayOffset++) {
-    const targetDate = new Date(now);
-    targetDate.setDate(now.getDate() + dayOffset);
-    const dateStr = targetDate.toISOString().split("T")[0]; // YYYY-MM-DD
-    const weekday = daysOfWeek[targetDate.getDay()];
-
-    // Determine peak hours
-    // morning peak: 09:00 - 13:00, night peak: 19:00 - 23:00.
-    // Let's allow scheduling from 08:00 to 22:00 in general.
+  const getTimePointerForDay = (dateStr: string, weekday: string): number => {
+    if (dayTimePointers[dateStr] !== undefined) {
+      return dayTimePointers[dateStr];
+    }
     let dailyStart = 8 * 60; // 08:00
-    let dailyEnd = 22 * 60;  // 22:00
     if (peakTime === "morning") {
       dailyStart = 9 * 60;
     } else {
-      dailyStart = 14 * 60; // Start scheduling later for night owls
-      dailyEnd = 23 * 60;
+      dailyStart = 14 * 60;
+    }
+    dayTimePointers[dateStr] = dailyStart;
+    return dailyStart;
+  };
+
+  let dailyEnd = 22 * 60; // 22:00
+  if (peakTime === "night") {
+    dailyEnd = 23 * 60;
+  }
+
+  for (const session of sessionsToSchedule) {
+    const duration = session.duration;
+
+    // Determine start date for search
+    let startSearchDate = new Date(getLocalDateStr(now));
+    if (session.task.deadline) {
+      const deadlineDateStr = session.task.deadline.split("T")[0];
+      const deadlineDate = new Date(deadlineDateStr);
+      const todayDate = new Date(getLocalDateStr(now));
+      if (deadlineDate > todayDate) {
+        startSearchDate = deadlineDate;
+      }
     }
 
-    // Identify active blocked blocks for today
-    const blocksToday = blockedBlocks.filter((b) => b.days.includes(weekday));
+    // Search up to 30 days to find a day with a free slot
+    for (let dayOffset = 0; dayOffset < 30; dayOffset++) {
+      const targetDate = new Date(startSearchDate);
+      targetDate.setDate(startSearchDate.getDate() + dayOffset);
+      const dateStr = getLocalDateStr(targetDate);
+      const weekday = daysOfWeek[targetDate.getDay()];
 
-    let timePointer = dailyStart;
+      let timePointer = getTimePointerForDay(dateStr, weekday);
 
-    // Schedule as many sessions as we can today
-    while (timePointer < dailyEnd && sessionIdx < sessionsToSchedule.length) {
-      const session = sessionsToSchedule[sessionIdx];
-      const duration = session.duration;
+      // Check if this slot collides with blocked blocks
+      const blocksToday = (blockedBlocks || []).filter((b) => b.days && b.days.includes(weekday));
 
-      // Check if this duration collides with any blocked block today
       let isBlocked = false;
       let nextAvailableTime = timePointer;
 
       for (const block of blocksToday) {
+        if (!block.startTime || !block.endTime) continue;
         const blockStart = timeToMinutes(block.startTime);
         const blockEnd = timeToMinutes(block.endTime);
 
-        // If our proposed slot [timePointer, timePointer + duration] overlaps with blocked block [blockStart, blockEnd]
         if (timePointer < blockEnd && timePointer + duration > blockStart) {
           isBlocked = true;
           nextAvailableTime = Math.max(nextAvailableTime, blockEnd);
@@ -195,35 +210,35 @@ const generateMockSchedule = (
       }
 
       if (isBlocked) {
+        dayTimePointers[dateStr] = nextAvailableTime;
         timePointer = nextAvailableTime;
-        // Check if we exceeded end of day
-        if (timePointer + duration > dailyEnd) {
-          break;
-        }
-        continue; // Try again at next available time
       }
 
-      // Safe to schedule!
-      const startTimeStr = minutesToTime(timePointer);
-      const endTimeStr = minutesToTime(timePointer + duration);
+      // Check if it fits in this day
+      if (timePointer + duration <= dailyEnd) {
+        // Fits! Schedule here
+        const startTimeStr = minutesToTime(timePointer);
+        const endTimeStr = minutesToTime(timePointer + duration);
 
-      schedule.push({
-        date: dateStr,
-        startTime: startTimeStr,
-        endTime: endTimeStr,
-        taskId: session.task.id,
-        taskName: session.task.name,
-        sessionNote: session.total > 1
-          ? `Session ${session.sessionIndex} of ${session.total} · ${duration} min`
-          : session.task.schedulingTip || session.task.category,
-        category: session.task.category,
-        sessionNumber: session.total > 1 ? session.sessionIndex : undefined,
-        totalSessions: session.total > 1 ? session.total : undefined,
-        sessionDuration: duration,
-      });
+        schedule.push({
+          date: dateStr,
+          startTime: startTimeStr,
+          endTime: endTimeStr,
+          taskId: session.task.id,
+          taskName: session.task.name,
+          sessionNote: session.total > 1
+            ? `Session ${session.sessionIndex} of ${session.total} · ${duration} min`
+            : session.task.schedulingTip || session.task.category,
+          category: session.task.category,
+          sessionNumber: session.total > 1 ? session.sessionIndex : undefined,
+          totalSessions: session.total > 1 ? session.total : undefined,
+          sessionDuration: duration,
+        });
 
-      timePointer += duration + 15; // 15 mins break between sessions
-      sessionIdx++;
+        // Update the time pointer for this day (plus 15 min buffer)
+        dayTimePointers[dateStr] = timePointer + duration + 15;
+        break; // Scheduled successfully, stop searching for this session
+      }
     }
   }
 
@@ -313,11 +328,11 @@ export const recoverTask = async (taskName: string, freeWindows: any[]): Promise
 
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+    const tomorrowStr = getLocalDateStr(tomorrow);
 
     const dayAfter = new Date();
     dayAfter.setDate(dayAfter.getDate() + 2);
-    const dayAfterStr = dayAfter.toISOString().split("T")[0];
+    const dayAfterStr = getLocalDateStr(dayAfter);
 
     return {
       suggestion1: {

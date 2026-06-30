@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Task, ScheduleItem, PressureAlert, RecoveryData } from "../types";
 import { classifyTask, generateSchedule, getPressureAlert, recoverTask } from "../lib/api";
-import { getTaskColor, formatDate, generateId, splitIntoSessions } from "../lib/utils";
+import { getTaskColor, formatDate, generateId, splitIntoSessions, getLocalDateStr } from "../lib/utils";
 
 // Custom type for Web Speech API
 interface IWindow extends Window {
@@ -116,7 +116,7 @@ export default function Dashboard() {
 
   // Get today's date string in YYYY-MM-DD
   const getTodayStr = () => {
-    return new Date().toISOString().split("T")[0];
+    return getLocalDateStr();
   };
 
   const getTodayFormatted = () => {
@@ -339,11 +339,11 @@ export default function Dashboard() {
       // Hardcoded fallback on fail
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = tomorrow.toISOString().split("T")[0];
+      const tomorrowStr = getLocalDateStr(tomorrow);
 
       const dayAfter = new Date();
       dayAfter.setDate(dayAfter.getDate() + 2);
-      const dayAfterStr = dayAfter.toISOString().split("T")[0];
+      const dayAfterStr = getLocalDateStr(dayAfter);
 
       setRecoveryData({
         suggestion1: { date: tomorrowStr, time: "10:00", reason: "Safe slot after class routine blocks." },
@@ -1025,7 +1025,7 @@ export default function Dashboard() {
                   <input
                     type="date"
                     id="deadlineNativePicker"
-                    min={new Date().toISOString().split("T")[0]}
+                    min={getLocalDateStr()}
                     onChange={(e) => {
                       if (e.target.value) {
                         const d = new Date(e.target.value);

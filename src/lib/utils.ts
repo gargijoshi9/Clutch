@@ -1,5 +1,12 @@
 import { Task } from "../types";
 
+export const getLocalDateStr = (d = new Date()): string => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 export const formatDate = (date: Date | string): string => {
   const d = typeof date === "string" ? new Date(date) : date;
   return d.toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });

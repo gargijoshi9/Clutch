@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { RefreshCw, Loader2, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { ScheduleItem, Task } from "../types";
-import { getWeekRange, getTaskColor, getMonday } from "../lib/utils";
+import { getWeekRange, getTaskColor, getMonday, getLocalDateStr } from "../lib/utils";
 import { generateSchedule } from "../lib/api";
 
 export default function ScheduleScreen() {
@@ -33,7 +33,7 @@ export default function ScheduleScreen() {
     }
 
     // Default select today
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = getLocalDateStr();
     setSelectedDateStr(todayStr);
   }, []);
 
@@ -102,7 +102,7 @@ export default function ScheduleScreen() {
                 const d = new Date();
                 d.setDate(d.getDate() + (newOffset * 7));
                 const nextMon = getMonday(d);
-                setSelectedDateStr(nextMon.toISOString().split("T")[0]);
+                setSelectedDateStr(getLocalDateStr(nextMon));
               }}
               className="p-1.5 rounded-[10px] text-[#888780] hover:text-[#1A1A1A] transition-colors focus:outline-none"
               title="Previous Week"
@@ -113,7 +113,7 @@ export default function ScheduleScreen() {
             <button
               onClick={() => {
                 setWeekOffset(0);
-                const todayStr = new Date().toISOString().split("T")[0];
+                const todayStr = getLocalDateStr();
                 setSelectedDateStr(todayStr);
               }}
               className={`text-[11px] font-medium px-2.5 py-1 rounded-[10px] transition-all focus:outline-none ${
@@ -132,7 +132,7 @@ export default function ScheduleScreen() {
                 const d = new Date();
                 d.setDate(d.getDate() + (newOffset * 7));
                 const nextMon = getMonday(d);
-                setSelectedDateStr(nextMon.toISOString().split("T")[0]);
+                setSelectedDateStr(getLocalDateStr(nextMon));
               }}
               className="p-1.5 rounded-[10px] text-[#888780] hover:text-[#1A1A1A] transition-colors focus:outline-none"
               title="Next Week"
@@ -152,7 +152,7 @@ export default function ScheduleScreen() {
         {/* DAY STRIP CARD */}
         <div className="bg-white border border-[#E0DED9] rounded-[14px] p-2 flex items-center justify-between">
           {weekdaysList.map((day, idx) => {
-            const dateStr = day.toISOString().split("T")[0];
+            const dateStr = getLocalDateStr(day);
             const isActive = selectedDateStr === dateStr;
             const dayNum = day.getDate();
 
