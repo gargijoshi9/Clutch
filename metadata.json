@@ -1,0 +1,6 @@
+{
+  "name": "Clutch",
+  "description": "A minimal, fast, AI-powered student productivity companion designed for students in a rush.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
