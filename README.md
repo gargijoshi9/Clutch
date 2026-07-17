@@ -101,13 +101,3 @@ docker run -d -p 3001:3001 --env GEMINI_API_KEY="your_api_key" clutch-productivi
 Your service will be available immediately at `http://localhost:3001`.
 
 ---
-
-## 📋 Resume Bullet Points (Ready-to-Use)
-
-If you are showcasing this project on your software engineering resume, here are high-impact metric-driven bullet points you can utilize:
-
-- **Full-Stack AI Integration:** Developed and architected a production-ready student productivity dashboard (*Clutch*), utilizing the next-generation Google Gemini API (`@google/genai`) to handle high-concurrency client requests via server-side secure proxies.
-- **Performance Optimization:** Implemented a unified build pipeline leveraging **Vite 6** and **esbuild**, reducing application bundle sizes and boosting development iteration speed through customized HMR configurations.
-- **Containerized Workflows:** Engineered a multi-stage **Docker deployment pipeline** built on top of a `node:20-alpine` footprint, minimizing final production image sizes and ensuring seamless continuous deployments.
-- **Modern UI Architecture:** Built an accessible, high-performance UI using **React 19**, **Tailwind CSS v4**, and **Framer Motion**, maintaining strict state normalization across decoupled client-server parameters.
-- **Secure Native API Capabilities:** Scaled native application capability interfaces, enabling microphone access schemas directly inside the application structure to lay foundational bridges for real-time voice streaming pipelines.
