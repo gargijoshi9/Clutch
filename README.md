@@ -91,7 +91,7 @@ Clutch is production-optimized with an automated build manifest designed to wrap
 
 ### Build Image Locally
 ```bash
-docker build -t clutch-productivity-app
+docker build -t clutch-productivity-app .
 ```
 
 ### Launch Container
